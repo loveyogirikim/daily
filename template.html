@@ -113,7 +113,7 @@
   <h1>Anny Daily Briefing</h1>
   <p class="sub">Small steps every day create big changes.</p>
   <p class="sub">매일 아침 9시에 최신 요약이 반영되는 자동화 프로젝트 허브입니다.</p>
-  <p class="updated">마지막 갱신: 2026년 06월 17일 10:05 KST</p>
+  <p class="updated">마지막 갱신: {{UPDATED_DATE}}</p>
 </header>
 
 <div class="wrap" style="margin-top:28px;">
@@ -121,18 +121,14 @@
   <!-- 영어 문장 -->
   <div class="quote-bar">
     <div class="label">📖 오늘의 영어 문장</div>
-    <blockquote>Even though the future seems far away, it is actually beginning right now.</blockquote>
-    <p class="translation">비록 미래가 멀리 있는 것처럼 보일지라도, 사실 바로 지금 시작되고 있다. - Mattie Stepanek</p>
+    <blockquote>{{QUOTE_EN}}</blockquote>
+    <p class="translation">{{QUOTE_KO}}</p>
   </div>
 
   <!-- 증시 -->
   <p class="section-title">📈 오늘의 증시</p>
   <div class="market-grid">
-    <div class="market-chip"><div class="m-name">KOSPI</div><div class="m-value">-</div><div class="m-change flat">데이터 없음</div></div>
-    <div class="market-chip"><div class="m-name">KOSDAQ</div><div class="m-value">-</div><div class="m-change flat">데이터 없음</div></div>
-    <div class="market-chip"><div class="m-name">S&P 500</div><div class="m-value">-</div><div class="m-change flat">데이터 없음</div></div>
-    <div class="market-chip"><div class="m-name">NASDAQ</div><div class="m-value">-</div><div class="m-change flat">데이터 없음</div></div>
-    <div class="market-chip"><div class="m-name">DOW</div><div class="m-value">-</div><div class="m-change flat">데이터 없음</div></div>
+    {{STOCK_CHIPS}}
   </div>
 
   <!-- 카드 -->
@@ -176,14 +172,14 @@
 
     <div class="card">
       <div class="card-thumb">
-        <iframe src="https://www.youtube-nocookie.com/embed/kc9QW75eMmg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" title="오늘의 운동"></iframe>
+        <iframe src="{{YOUTUBE_EMBED}}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" title="오늘의 운동"></iframe>
       </div>
       <div class="card-body">
         <span class="card-tag tag-blue">운동</span>
         <h3>오늘의 운동 루틴</h3>
         <p>루틴 노션 또는 운동 영상을 확인하세요.</p>
       </div>
-      <div class="card-footer"><a href="https://youtu.be/kc9QW75eMmg" target="_blank" class="btn-blue">MORE →</a></div>
+      <div class="card-footer"><a href="{{YOUTUBE_URL}}" target="_blank" class="btn-blue">MORE →</a></div>
     </div>
 
   </div>
@@ -191,10 +187,7 @@
   <!-- Todo -->
   <p class="section-title">✅ Todo</p>
   <ul class="todo-list">
-    <li>Manus 사용 확인</li>
-    <li>앱스크립트 완성 연결 공유</li>
-    <li>가치놀이터 사이트 구성 체크</li>
-    <li>강의안 확인</li>
+    {{TODO_ITEMS}}
   </ul>
 
 </div>

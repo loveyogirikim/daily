@@ -1,8 +1,9 @@
 """
 update.py - 매일 아침 9시(KST) GitHub Actions 자동 실행
+template.html + config.json -> index.html 생성
 """
 
-import random
+import json
 from datetime import datetime, timezone, timedelta
 
 try:
@@ -11,6 +12,7 @@ try:
 except ImportError:
     HAS_YF = False
 
+# 영어 문장 목록 (config.json에 quote_override_en 이 있으면 그걸 우선 사용)
 QUOTES = [
     {"en": "Even though the future seems far away, it is actually beginning right now.",
      "ko": "비록 미래가 멀리 있는 것처럼 보일지라도, 사실 바로 지금 시작되고 있다. - Mattie Stepanek"},
@@ -28,17 +30,6 @@ QUOTES = [
      "ko": "당신의 한계는 오직 상상력뿐이다."},
 ]
 
-WORKOUTS = [
-    {"id": "kc9QW75eMmg", "url": "https://youtu.be/kc9QW75eMmg"},
-]
-
-TODO_ITEMS = [
-    "Manus 사용 확인",
-    "앱스크립트 완성 연결 공유",
-    "가치놀이터 사이트 구성 체크",
-    "강의안 확인",
-]
-
 MARKET_SYMBOLS = [
     {"symbol": "^KS11", "name": "KOSPI"},
     {"symbol": "^KQ11", "name": "KOSDAQ"},
@@ -49,20 +40,23 @@ MARKET_SYMBOLS = [
 
 
 def get_kst_now():
-    kst = timezone(timedelta(hours=9))
-    return datetime.now(kst)
+    return datetime.now(timezone(timedelta(hours=9)))
 
 
 def pick_of_day(items, now):
-    idx = now.timetuple().tm_yday % len(items)
-    return items[idx]
+    return items[now.timetuple().tm_yday % len(items)]
+
+
+def load_config():
+    try:
+        with open("config.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 
 def build_todo_html(items):
-    parts = []
-    for item in items:
-        parts.append("<li>" + item + "</li>")
-    return "\n    ".join(parts)
+    return "\n    ".join("<li>" + item + "</li>" for item in items)
 
 
 def fetch_stock_chips():
@@ -72,8 +66,7 @@ def fetch_stock_chips():
     chips = []
     for item in MARKET_SYMBOLS:
         try:
-            ticker = yf.Ticker(item["symbol"])
-            hist = ticker.history(period="2d")
+            hist = yf.Ticker(item["symbol"]).history(period="2d")
             if len(hist) < 1:
                 raise ValueError("no data")
             close = float(hist["Close"].iloc[-1])
@@ -82,77 +75,77 @@ def fetch_stock_chips():
                 diff = close - prev
                 pct  = diff / prev * 100.0
             else:
-                diff = 0.0
-                pct  = 0.0
+                diff = pct = 0.0
 
-            if diff > 0:
-                sign = "+"
-                css  = "up"
-            elif diff < 0:
-                sign = "-"
-                css  = "down"
-            else:
-                sign = ""
-                css  = "flat"
+            sign = "+" if diff > 0 else ("-" if diff < 0 else "")
+            css  = "up"  if diff > 0 else ("down" if diff < 0 else "flat")
+            change_s = sign + "{:.2f}".format(abs(diff)) + " (" + "{:.2f}".format(abs(pct)) + "%)"
 
-            val_s    = "{:,.2f}".format(close)
-            diff_s   = "{:.2f}".format(abs(diff))
-            pct_s    = "{:.2f}".format(abs(pct))
-            change_s = sign + diff_s + " (" + pct_s + "%)"
-
-            chip = (
+            chips.append(
                 '<div class="market-chip">'
                 + '<div class="m-name">' + item["name"] + '</div>'
-                + '<div class="m-value">' + val_s + '</div>'
+                + '<div class="m-value">' + "{:,.2f}".format(close) + '</div>'
                 + '<div class="m-change ' + css + '">' + change_s + '</div>'
                 + '</div>'
             )
-            chips.append(chip)
-
         except Exception as e:
-            chip = (
+            chips.append(
                 '<div class="market-chip">'
                 + '<div class="m-name">' + item["name"] + '</div>'
                 + '<div class="m-value">-</div>'
                 + '<div class="m-change flat">데이터 없음</div>'
                 + '</div>'
             )
-            chips.append(chip)
             print("warning: " + item["name"] + " - " + str(e))
-
     return "\n    ".join(chips)
 
 
 def main():
-    now = get_kst_now()
+    now    = get_kst_now()
+    config = load_config()
+
     updated_date = now.strftime("%Y년 %m월 %d일 %H:%M KST")
 
-    quote   = pick_of_day(QUOTES, now)
-    workout = pick_of_day(WORKOUTS, now)
-    embed   = "https://www.youtube-nocookie.com/embed/" + workout["id"]
-    url     = workout["url"]
-    todo    = build_todo_html(TODO_ITEMS)
+    # 영어 문장: config 우선, 없으면 자동 순환
+    if config.get("quote_override_en"):
+        quote_en = config["quote_override_en"]
+        quote_ko = config.get("quote_override_ko", "")
+    else:
+        q = pick_of_day(QUOTES, now)
+        quote_en = q["en"]
+        quote_ko = q["ko"]
 
+    # 운동
+    workout_id  = config.get("workout_id",  "kc9QW75eMmg")
+    workout_url = config.get("workout_url", "https://youtu.be/" + workout_id)
+    embed       = "https://www.youtube-nocookie.com/embed/" + workout_id
+
+    # Todo
+    todo_items = config.get("todo", ["할 일을 config.json에서 편집하세요"])
+    todo_html  = build_todo_html(todo_items)
+
+    # 증시
     print("증시 데이터 수집 중...")
     stock_chips = fetch_stock_chips()
 
-    with open("index.html", "r", encoding="utf-8") as f:
+    # template.html 읽기 -> index.html 쓰기
+    with open("template.html", "r", encoding="utf-8") as f:
         html = f.read()
 
     html = html.replace("{{UPDATED_DATE}}",  updated_date)
-    html = html.replace("{{QUOTE_EN}}",      quote["en"])
-    html = html.replace("{{QUOTE_KO}}",      quote["ko"])
+    html = html.replace("{{QUOTE_EN}}",      quote_en)
+    html = html.replace("{{QUOTE_KO}}",      quote_ko)
     html = html.replace("{{YOUTUBE_EMBED}}", embed)
-    html = html.replace("{{YOUTUBE_URL}}",   url)
-    html = html.replace("{{TODO_ITEMS}}",    todo)
+    html = html.replace("{{YOUTUBE_URL}}",   workout_url)
+    html = html.replace("{{TODO_ITEMS}}",    todo_html)
     html = html.replace("{{STOCK_CHIPS}}",   stock_chips)
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
     print("완료: " + updated_date)
-    print("문장: " + quote["en"][:50])
-    print("운동: " + url)
+    print("문장: " + quote_en[:50])
+    print("운동: " + workout_url)
 
 
 if __name__ == "__main__":
